@@ -1,5 +1,6 @@
-from tarea import cargar_tareas
-from ui import completar_tarea_ui, eliminar_tarea_ui, agregar_tarea_ui, ver_tareas_ui
+from app.tarea import cargar_tareas
+from app.ui import completar_tarea_ui, eliminar_tarea_ui, agregar_tarea_ui, ver_tareas_ui
+
 import os
 def clean_console():
     os.system('cls' if os.name == 'nt' else 'clear')

@@ -1,7 +1,13 @@
-from fastapi import FastAPI
-from app import tarea
-from app.tarea import cargar_tareas, agregar_tarea, eliminar_tarea, completar_tarea, guardar_tareas
-from app.models import Tarea, EstadoTarea, TareaSalida
+from fastapi import FastAPI, Depends
+from sqlalchemy.orm import Session
+from app.database import get_db
+from app.models import Tarea 
+from app.tarea import cargar_tareas, agregar_tarea, eliminar_tarea, guardar_tareas
+from app.models import Tarea, EstadoTarea, TareaSalida, CrearTarea
+from app.database import engine
+from app.models import Base
+
+Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 
@@ -12,24 +18,17 @@ def home():
 
 # Obtener todas las tareas
 @app.get("/tareas", response_model=list[TareaSalida])
-def obtener_tareas():
-    tareas = cargar_tareas()
-    
-    return [
-        {
-            "id": i,
-            "nombre": tarea["nombre"],
-            "completada": tarea["completada"]
-        }
-        for i, tarea in enumerate(tareas)
-    ]
+def obtener_tareas(db: Session = Depends(get_db)):
+    tareas = db.query(Tarea).all()
+    return tareas
 
 # Agregar tarea
 @app.post("/tareas/agg")
-def crear_tarea(tarea: Tarea):
-    tareas = cargar_tareas()
-    agregar_tarea(tareas, tarea.nombre)
-    guardar_tareas(tareas)
+def crear_tarea(tarea: CrearTarea, db: Session = Depends(get_db)):
+    nueva_tarea = Tarea(nombre=tarea.nombre)
+    db.add(nueva_tarea)
+    db.commit()
+    db.refresh(nueva_tarea)
     return {"mensaje": "Tarea agregada"}
 
 # Eliminar tarea
