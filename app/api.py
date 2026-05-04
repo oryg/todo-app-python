@@ -1,8 +1,7 @@
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import Tarea 
-from app.tarea import cargar_tareas, agregar_tarea, eliminar_tarea, guardar_tareas
 from app.models import Tarea, EstadoTarea, TareaSalida, CrearTarea
 from app.database import engine
 from app.models import Base
@@ -32,34 +31,30 @@ def crear_tarea(tarea: CrearTarea, db: Session = Depends(get_db)):
     return {"mensaje": "Tarea agregada"}
 
 # Eliminar tarea
-@app.delete("/tareas/del/{indice}")
-def borrar_tarea(indice: int):
-    tareas = cargar_tareas()
+@app.delete("/tareas/del/{id}")
+def borrar_tarea(id: int, db: Session = Depends(get_db)):
+    tarea = db.query(Tarea).filter(Tarea.id == id).first()
 
-    if 0<= indice < len(tareas):
-        tarea = tareas[indice]
+    if not tarea:
+        raise HTTPException(status_code=404, detail="Tarea no encontrada")
 
-        estado="completada" if tarea["completada"] else "sin completar"
+    db.delete(tarea)
+    db.commit()
 
-        eliminar_tarea(tareas, indice)
-        guardar_tareas(tareas)
-
-        return {
-            "mensaje": f"Tarea '{tarea['nombre']} ({estado})' eliminada"
-        }
-    return {"error": "Índice inválido"}
+    return {"mensaje":"Tarea Eliminada"}
 
 # Completar tarea
-@app.put("/tareas/act/{indice}")
-def actualizar_tarea(indice: int, estado: EstadoTarea):
-    tareas = cargar_tareas()
+@app.put("/tareas/act/{id}")
+def actualizar_tarea(id: int, estado: EstadoTarea, db: Sesion = Depends(get_db)):
+    tarea = db.query(Tarea).filter(Tarea.id == id).first()
 
-    if 0 <= indice < len(tareas):
-        tareas[indice]["completada"] = estado.completada
-        guardar_tareas(tareas)
-
-        return {"mensaje": "Tarea actualizada"}
+    if not tarea:
+        raise HTTPException(status_code=404, detail="Tarea no encontrada")
     
-    return {"error": "Índice inválido"}
+    tarea.completada = estado.completada
+    db.commit()
+    db.refresh(tarea)
+
+    return {"mensaje": "Tarea actualizada"}
 
 
